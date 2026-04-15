@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const API = 'http://localhost:5000/api'
+const API = 'https://daa-algorithm-visualizer.onrender.com'
 
 export default function LCS() {
   const [X,      setX]      = useState('AGGTAB')
