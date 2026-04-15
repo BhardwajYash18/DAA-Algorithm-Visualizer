@@ -4,25 +4,29 @@ Flask REST API for Algorithm Visualizer
 Run:  python app.py
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from algorithms import run_fractional_knapsack, run_kruskal, run_lcs, run_tsp
 
 app = Flask(__name__)
 
-# ✅ Proper CORS setup
-CORS(app, origins="*", methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type"])
+# ✅ Simple and stable CORS setup
+CORS(app)
 
 
-# ✅ Handle preflight requests globally (CRITICAL FIX)
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        response = app.make_default_options_response()
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
-        response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
-        return response
+# ✅ Force proper headers on every response (CRITICAL)
+@app.after_request
+def after_request(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    return response
+
+
+# ✅ Handle ALL preflight requests explicitly
+@app.route('/api/<path:path>', methods=["OPTIONS"])
+def handle_options(path):
+    return make_response('', 200)
 
 
 # ── health check ──────────────────────────────────────────────────────────────
@@ -36,9 +40,9 @@ def health():
 def knapsack_route():
     data = request.get_json()
     try:
-        items    = [row["item"]   for row in data["items"]]
+        items    = [row["item"] for row in data["items"]]
         weights  = [float(row["weight"]) for row in data["items"]]
-        values   = [float(row["value"])  for row in data["items"]]
+        values   = [float(row["value"]) for row in data["items"]]
         capacity = float(data["capacity"])
         strategy = data.get("strategy", "ratio")
 
