@@ -8,7 +8,7 @@ from flask_cors import CORS
 from algorithms import run_fractional_knapsack, run_kruskal, run_lcs, run_tsp
 
 app = Flask(__name__)
-CORS(app)          # allow React dev-server (localhost:5173) to call us
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)          # allow React dev-server (localhost:5173) to call us
 
 
 # ── health check ──────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@ def health():
 
 
 # ── Fractional Knapsack ───────────────────────────────────────────────────────
-@app.route("/api/knapsack", methods=["POST"])
+@app.route("/api/knapsack", methods=["POST" , "OPTIONS"])
 def knapsack_route():
     data = request.get_json()
     try:
@@ -40,7 +40,7 @@ def knapsack_route():
 
 
 # ── Kruskal MST ───────────────────────────────────────────────────────────────
-@app.route("/api/kruskal", methods=["POST"])
+@app.route("/api/kruskal", methods=["POST" , "OPTIONS"])
 def kruskal_route():
     data = request.get_json()
     try:
@@ -57,7 +57,7 @@ def kruskal_route():
 
 
 # ── LCS ───────────────────────────────────────────────────────────────────────
-@app.route("/api/lcs", methods=["POST"])
+@app.route("/api/lcs", methods=["POST" , "OPTIONS"])
 def lcs_route():
     data = request.get_json()
     try:
@@ -74,7 +74,7 @@ def lcs_route():
 
 
 # ── TSP ───────────────────────────────────────────────────────────────────────
-@app.route("/api/tsp", methods=["POST"])
+@app.route("/api/tsp", methods=["POST" , "OPTIONS"])
 def tsp_route():
     data = request.get_json()
     try:
