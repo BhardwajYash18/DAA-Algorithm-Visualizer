@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const API = 'https://daa-algorithm-visualizer.onrender.com'
+const API = 'https://daa-algorithm-visualizer.onrender.com/api'
 
 const DEFAULT_CITIES = [
   { city: 'A', x: '0',  y: '0'  },
