@@ -8,7 +8,7 @@ from flask_cors import CORS
 from algorithms import run_fractional_knapsack, run_kruskal, run_lcs, run_tsp
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)          # allow React dev-server (localhost:5173) to call us
+CORS(app)          # allow React dev-server (localhost:5173) to call us
 
 
 # ── health check ──────────────────────────────────────────────────────────────
@@ -91,6 +91,17 @@ def tsp_route():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/<path:path>', methods=["OPTIONS"])
+def handle_options(path):
+    return '', 200
+
+
+@app.after_request
+def after_request(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    return response
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
