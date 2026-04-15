@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const API = 'http://localhost:5000/api'
+const API = 'https://daa-algorithm-visualizer.onrender.com'
 
 const DEFAULT_ITEMS = [
   { item: 'A', weight: '2', value: '10' },
