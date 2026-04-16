@@ -11,8 +11,8 @@ const DEFAULT_ITEMS = [
 ]
 
 const STRATEGIES = [
-  { value: 'ratio',  label: '📊 Max Value/Weight Ratio' },
-  { value: 'value',  label: '💰 Max Value First' },
+  { value: 'ratio',  label: '📊 Max Profit/Weight Ratio' },
+  { value: 'value',  label: '💰 Max Profit First' },
   { value: 'weight', label: '⚖️ Min Weight First' },
 ]
 
