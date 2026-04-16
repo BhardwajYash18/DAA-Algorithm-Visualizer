@@ -68,7 +68,7 @@ export default function Knapsack() {
               <th>#</th>
               <th>Item Name</th>
               <th>Weight</th>
-              <th>Value</th>
+              <th>Profit</th>
               <th></th>
             </tr>
           </thead>
