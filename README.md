@@ -13,7 +13,7 @@ An interactive platform to explore, run, and visualize classic Design and Analys
 
 ## 🏗️ Technical Stack
 
-- **Frontend:** React + Vite (HTML/CSS/JS)
+- **Frontend:** React + Vite 
 - **Backend:** Python + Flask (REST API)
 - **Charting Engine:** Matplotlib (Server-side rendering)
 
