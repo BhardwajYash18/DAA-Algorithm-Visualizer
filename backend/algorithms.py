@@ -338,68 +338,160 @@ def run_lcs(X, Y):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  TRAVELLING SALESMAN PROBLEM
+#  TRAVELLING SALESMAN PROBLEM  —  Held-Karp Bitmask DP  (exact, O(n² · 2ⁿ))
 # ══════════════════════════════════════════════════════════════════════════════
 
-def tsp_distance(cities):
+INF = float("inf")
+
+
+def _tsp_distance_matrix(cities):
+    """Euclidean distance matrix for a list of (x, y) tuples."""
     n = len(cities)
     dist = [[0.0] * n for _ in range(n)]
     for i in range(n):
         for j in range(n):
             dx = cities[i][0] - cities[j][0]
             dy = cities[i][1] - cities[j][1]
-            dist[i][j] = math.sqrt(dx * dx + dy * dy)
+            dist[i][j] = round(math.sqrt(dx * dx + dy * dy), 4)
     return dist
 
 
-def tsp_nearest_neighbour(dist, start=0):
+def _held_karp(dist, start=0):
+    """
+    Held-Karp exact TSP via bitmask DP.
+
+    dp[S][v]  = min cost to reach city v having visited the set S of cities,
+                starting from `start`.
+    parent[S][v] = the city we came from to reach v in state S.
+
+    Returns (optimal_cost, tour_indices).
+    """
     n = len(dist)
-    visited = [False] * n
-    tour = [start]
-    visited[start] = True
-    for _ in range(n - 1):
-        curr = tour[-1]
-        best_next, best_dist = -1, float("inf")
-        for j in range(n):
-            if not visited[j] and dist[curr][j] < best_dist:
-                best_dist = dist[curr][j]
-                best_next = j
-        tour.append(best_next)
-        visited[best_next] = True
-    tour.append(start)
-    return tour
+    FULL = (1 << n) - 1
+
+    # dp[mask][v]: min cost to reach v with visited-set == mask
+    dp     = [[INF] * n for _ in range(1 << n)]
+    parent = [[-1]  * n for _ in range(1 << n)]
+
+    dp[1 << start][start] = 0.0
+
+    for mask in range(1 << n):
+        for u in range(n):
+            if not (mask >> u & 1):          # u not in current set
+                continue
+            if dp[mask][u] == INF:
+                continue
+            for v in range(n):
+                if mask >> v & 1:            # v already visited
+                    continue
+                new_mask = mask | (1 << v)
+                new_cost = dp[mask][u] + dist[u][v]
+                if new_cost < dp[new_mask][v]:
+                    dp[new_mask][v] = new_cost
+                    parent[new_mask][v] = u
+
+    # Find best last city to return to start
+    best_cost = INF
+    last = -1
+    for v in range(n):
+        if v == start:
+            continue
+        if dp[FULL][v] == INF:
+            continue
+        total = dp[FULL][v] + dist[v][start]
+        if total < best_cost:
+            best_cost = total
+            last = v
+
+    # Reconstruct tour via parent pointers
+    tour = []
+    mask = FULL
+    cur  = last
+    while cur != -1:
+        tour.append(cur)
+        prev = parent[mask][cur]
+        mask ^= (1 << cur)
+        cur   = prev
+    tour.reverse()
+    tour.append(start)   # return to start
+
+    return round(best_cost, 4), tour, dp
 
 
-def tsp_tour_length(tour, dist):
-    return sum(dist[tour[i]][tour[i + 1]] for i in range(len(tour) - 1))
+def _build_dp_steps(dist, dp, tour, city_names, start):
+    """
+    Build a human-readable step list showing the key DP decisions
+    along the optimal path only (to keep the panel concise).
+    """
+    n = len(dist)
+    steps = []
+    running = 0.0
+
+    # Walk along the optimal tour transitions
+    mask = 1 << start
+    for i in range(len(tour) - 1):
+        u = tour[i]
+        v = tour[i + 1]
+        leg = round(dist[u][v], 2)
+        running = round(running + leg, 2)
+        new_mask = mask | (1 << v) if v != start else mask
+
+        # Find best alternative for this step (nearest unvisited from u)
+        candidates = []
+        for c in range(n):
+            if not (mask >> c & 1):
+                candidates.append((round(dist[u][c], 2), city_names[c]))
+        candidates.sort()
+
+        steps.append({
+            "step":       i + 1,
+            "from":       city_names[u],
+            "to":         city_names[v] if i < len(tour) - 2 else f"{city_names[v]} (return)",
+            "mask":       bin(new_mask),
+            "dp_value":   round(dp[new_mask][v] if v != start else running, 2),
+            "leg_dist":   leg,
+            "cumulative": running,
+            "candidates": candidates[:3],   # top-3 alternatives shown in UI
+        })
+        mask = new_mask
+
+    return steps
 
 
-def _plot_tsp(cities, tour, title="TSP Tour") -> str:
+def _plot_tsp_dp(cities, tour, city_names, total_cost) -> str:
+    """Draw the optimal Held-Karp tour."""
     fig, ax = plt.subplots(figsize=(8, 6))
     fig.patch.set_facecolor(BG)
     ax.set_facecolor(CARD)
 
+    # Draw tour edges with direction arrows
     for i in range(len(tour) - 1):
-        c1, c2 = cities[tour[i]], cities[tour[i + 1]]
-        ax.plot([c1[0], c2[0]], [c1[1], c2[1]],
-                color=GOLD, linewidth=2, zorder=1, alpha=0.85)
+        c1 = cities[tour[i]]
+        c2 = cities[tour[i + 1]]
+        ax.annotate(
+            "", xy=(c2[0], c2[1]), xytext=(c1[0], c1[1]),
+            arrowprops=dict(arrowstyle="-|>", color=GOLD,
+                            lw=2, mutation_scale=15),
+            zorder=2
+        )
 
     xs = [c[0] for c in cities]
     ys = [c[1] for c in cities]
-    ax.scatter(xs, ys, color=GOLD_L, s=120, zorder=3,
-               edgecolors=DARK, linewidths=1.2)
+    ax.scatter(xs, ys, color=GOLD_L, s=140, zorder=3,
+               edgecolors=DARK, linewidths=1.5)
 
     for idx, (x, y) in enumerate(cities):
-        ax.text(x + 0.5, y + 0.5, str(idx), fontsize=9, color=DARK,
-                bbox=dict(boxstyle="round,pad=0.2", facecolor=GOLD,
-                          edgecolor="none", alpha=0.9))
+        ax.text(x, y + 0.55, city_names[idx], fontsize=9, color=DARK,
+                ha="center", va="bottom",
+                bbox=dict(boxstyle="round,pad=0.25", facecolor=GOLD,
+                          edgecolor="none", alpha=0.95))
 
     sx, sy = cities[tour[0]]
-    ax.scatter([sx], [sy], color="#3ecf4f", s=200, zorder=4,
+    ax.scatter([sx], [sy], color="#3ecf4f", s=220, zorder=4,
                edgecolors=DARK, linewidths=1.5)
-    ax.text(sx + 0.5, sy - 1.5, "Start", fontsize=8, color="#3ecf4f")
 
-    ax.set_title(title, fontsize=13, color=GOLD_L, fontweight="bold")
+    ax.set_title(f"Held-Karp DP — Optimal Tour  (Total: {total_cost:.2f})",
+                 fontsize=13, color=GOLD_L, fontweight="bold")
     ax.set_xlabel("X", color=WHITE, fontsize=10)
     ax.set_ylabel("Y", color=WHITE, fontsize=10)
     ax.tick_params(colors=WHITE, labelsize=8)
@@ -412,45 +504,54 @@ def _plot_tsp(cities, tour, title="TSP Tour") -> str:
 
 def run_tsp(city_names, coords, start=0):
     """
+    Exact TSP via Held-Karp bitmask DP.
+
     Returns
     -------
-    dict  with keys: total_cost, tour (names), steps, distance_matrix (rounded),
-                     dm_row_labels, tour_chart_b64
+    dict with keys:
+        total_cost, tour (city names), steps (DP decisions along optimal path),
+        distance_matrix (rounded), dm_labels, tour_chart_b64, algorithm
     """
-    dist_matrix = tsp_distance(coords)
-    nn_tour     = tsp_nearest_neighbour(dist_matrix, start=int(start))
-    nn_dist     = tsp_tour_length(nn_tour, dist_matrix)
-    tour_names  = [city_names[i] for i in nn_tour]
+    start = int(start)
+    n = len(coords)
 
-    # Step-by-step table
+    dist_matrix = _tsp_distance_matrix(coords)
+    optimal_cost, tour_indices, dp = _held_karp(dist_matrix, start=start)
+    tour_names = [city_names[i] for i in tour_indices]
+
+    dp_steps = _build_dp_steps(dist_matrix, dp, tour_indices, city_names, start)
+
+    # Plain step table (matches old schema so frontend table still works)
     steps = []
     running = 0.0
-    for i in range(len(nn_tour) - 1):
-        frm = nn_tour[i]; to = nn_tour[i + 1]
+    for i in range(len(tour_indices) - 1):
+        frm = tour_indices[i]
+        to  = tour_indices[i + 1]
         leg = round(dist_matrix[frm][to], 2)
-        running += leg
+        running = round(running + leg, 2)
         steps.append({
             "Step":            i + 1,
             "From":            city_names[frm],
             "To":              city_names[to],
             "Leg Distance":    leg,
-            "Cumulative Cost": round(running, 2),
+            "Cumulative Cost": running,
         })
 
-    # Distance matrix (rounded, labelled)
-    dm_rounded = [[round(dist_matrix[i][j], 2) for j in range(len(coords))]
-                  for i in range(len(coords))]
+    dm_rounded = [
+        [round(dist_matrix[i][j], 2) for j in range(n)]
+        for i in range(n)
+    ]
 
-    chart_b64 = _plot_tsp(
-        coords, nn_tour,
-        title=f"TSP — Nearest Neighbour  (Total: {nn_dist:.2f})"
-    )
+    chart_b64 = _plot_tsp_dp(coords, tour_indices, city_names, optimal_cost)
 
     return {
-        "total_cost":       round(nn_dist, 2),
+        "algorithm":        "Held-Karp Dynamic Programming",
+        "total_cost":       optimal_cost,
         "tour":             tour_names,
         "steps":            steps,
+        "dp_steps":         dp_steps,
         "distance_matrix":  dm_rounded,
         "dm_labels":        city_names,
         "tour_chart_b64":   chart_b64,
     }
+

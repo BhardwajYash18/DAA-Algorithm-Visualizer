@@ -90,6 +90,8 @@ def tsp_route():
 
         if len(cities) < 3:
             return jsonify({"error": "Please enter at least 3 cities."}), 400
+        if len(cities) > 15:
+            return jsonify({"error": "Held-Karp DP is exact but exponential (O(n²·2ⁿ)). Please use ≤ 15 cities for the visualizer."}), 400
 
         result = run_tsp(city_names, coords, start)
         return jsonify(result)
